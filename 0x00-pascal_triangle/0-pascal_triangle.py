@@ -1,6 +1,9 @@
 #!/usr/bin/python3
+"""Fucntion Pascal"""
+
 
 def pascal_triangle(n):
+    """Function to return list of list of a pascal"""
     if n <= 0:
         return []
 
