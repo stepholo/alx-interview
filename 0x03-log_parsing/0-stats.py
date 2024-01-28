@@ -1,41 +1,44 @@
 #!/usr/bin/python3
+
 import sys
-import signal
+
 
 total_size = 0
-status_codes_count = {200: 0, 301: 0, 400: 0, 401: 0,
-                      403: 0, 404: 0, 405: 0, 500: 0}
-lines_processed = 0
+stats = {}
+allowed = [200, 301, 400, 401, 403, 404, 405, 500]
+count = 0
 
 
-def print_statistics():
+def show_stats():
+    '''Print the statistics'''
     print("File size: {}".format(total_size))
-    for code in sorted(status_codes_count.keys()):
-        count = status_codes_count[code]
-        if count > 0:
-            print("{}: {}".format(code, count))
-    print()
+
+    for stat in sorted(stats.keys()):
+        print("{}: {}".format(stat, stats.get(stat)))
 
 
-def signal_handler(signal, frame):
-    print_statistics()
-    sys.exit(0)
+try:
+    for line in sys.stdin:
+        line = line.strip().split()
+        if (len(line) != 10 or line[5] != "GET" or line[6] != "/projects/260"
+           or line[8] != "HTTPS/1.1"):
+            continue
 
+        status_code = int(line[7])
+        file_size = int(line[9])
 
-signal.signal(signal.SIGINT, signal_handler)
+        if status_code not in allowed:
+            continue
 
-for line in sys.stdin:
-    try:
-        _, _, _, _, _, status_code_str, file_size_str = line.split()[3:10]
-        status_code = int(status_code_str)
-        file_size = int(file_size_str)
-    except (ValueError, IndexError):
-        # Skip lines with incorrect format
-        continue
+        stats[status_code] = stats.get(status_code, 0) + 1
+        total_size += file_size
 
-    total_size += file_size
-    status_codes_count[status_code] += 1
-    lines_processed += 1
+        count += 1
+        if count == 10:
+            show_stats()
+            count = 0
 
-    if lines_processed % 10 == 0:
-        print_statistics()
+except KeyboardInterrupt:
+    pass
+finally:
+    show_stats()
